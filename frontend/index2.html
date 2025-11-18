@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNIST Digit Recognition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: #f1f8e9;
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid #4CAF50;
+        }
+
+        .section h2 {
+            color: #4CAF50;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .canvas-container {
+            text-align: center;
+        }
+
+        #drawCanvas {
+            border: 3px solid #4CAF50;
+            border-radius: 10px;
+            cursor: crosshair;
+            background: white;
+            display: block;
+            margin: 0 auto;
+            touch-action: none;
+        }
+
+        .upload-area {
+            border: 3px dashed #4CAF50;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .upload-area:hover {
+            background: #e8f5e8;
+            border-color: #2E7D32;
+        }
+
+        .upload-area.dragover {
+            background: #dcedc8;
+            border-color: #2E7D32;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #388E3C;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result-section {
+            background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            display: none;
+            margin-top: 30px;
+        }
+
+        .result-section.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .predicted-digit {
+            font-size: 5em;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .confidence {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+
+        .top-predictions {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .prediction-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .prediction-item:last-child {
+            border-bottom: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #4CAF50;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔢 Digit Recognition</h1>
+        <p class="subtitle">Draw or upload a digit (0-9) to recognize it using AI</p>
+
+        <div class="main-content">
+            <!-- Drawing Section -->
+            <div class="section">
+                <h2>✏️ Draw a Digit</h2>
+                <div class="canvas-container">
+                    <canvas id="drawCanvas" width="280" height="280"></canvas>
+                </div>
+                <div class="button-group">
+                    <button class="btn-primary" onclick="predictDrawing()">Predict</button>
+                    <button class="btn-secondary" onclick="clearCanvas()">Clear</button>
+                </div>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="section">
+                <h2>📁 Upload an Image</h2>
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📤</div>
+                    <p><strong>Click to upload</strong> or drag & drop</p>
+                    <p style="color: #999; font-size: 0.9em; margin-top: 10px;">PNG, JPG, or any image format</p>
+                </div>
+                <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
+                <img id="previewImage" class="preview-image" alt="Preview">
+                <div class="button-group">
+                    <button class="btn-primary" id="predictUploadBtn" onclick="predictUpload()" disabled>Predict</button>
+                    <button class="btn-secondary" onclick="clearUpload()">Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px;">Analyzing digit...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div class="error" id="error"></div>
+
+        <!-- Result Section -->
+        <div class="result-section" id="resultSection">
+            <h2>Prediction Result</h2>
+            <div class="predicted-digit" id="predictedDigit">-</div>
+            <div class="confidence" id="confidence">Confidence: -</div>
+            <div class="top-predictions">
+                <strong>Top 3 Predictions:</strong>
+                <div id="topPredictions"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - CHANGE THIS TO YOUR BACKEND URL
+        const API_URL = 'http://localhost:5000/predict';
+
+        // Canvas setup
+        const canvas = document.getElementById('drawCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+
+        // Initialize canvas
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 20;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Drawing functions
+        function startDrawing(e) {
+            isDrawing = true;
+            draw(e);
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+            ctx.beginPath();
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        // Mouse events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        // Touch events
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startDrawing(e);
+        });
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopDrawing();
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            draw(e);
+        });
+
+        function clearCanvas() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            hideResult();
+        }
+
+        // Upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewImage = document.getElementById('previewImage');
+        const predictUploadBtn = document.getElementById('predictUploadBtn');
+        let uploadedFile = null;
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('Please upload an image file');
+                return;
+            }
+
+            uploadedFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                previewImage.style.display = 'block';
+                predictUploadBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+            hideResult();
+        }
+
+        function clearUpload() {
+            fileInput.value = '';
+            previewImage.style.display = 'none';
+            previewImage.src = '';
+            uploadedFile = null;
+            predictUploadBtn.disabled = true;
+            hideResult();
+        }
+
+        // Prediction functions
+        async function predictDrawing() {
+            canvas.toBlob(async (blob) => {
+                await sendPrediction(blob);
+            });
+        }
+
+        async function predictUpload() {
+            if (!uploadedFile) {
+                showError('Please upload an image first');
+                return;
+            }
+            await sendPrediction(uploadedFile);
+        }
+
+        async function sendPrediction(imageBlob) {
+            const formData = new FormData();
+            formData.append('file', imageBlob, 'digit.png');
+
+            showLoading();
+            hideError();
+            hideResult();
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                displayResult(data);
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`Prediction failed: ${error.message}. Make sure your Flask backend is running on ${API_URL}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayResult(data) {
+            const resultSection = document.getElementById('resultSection');
+            const predictedDigit = document.getElementById('predictedDigit');
+            const confidence = document.getElementById('confidence');
+            const topPredictions = document.getElementById('topPredictions');
+
+            predictedDigit.textContent = data.prediction;
+            confidence.textContent = `Confidence: ${(data.confidence * 100).toFixed(2)}%`;
+
+            // Display top 3 predictions
+            topPredictions.innerHTML = data.top_3.map(pred => `
+                <div class="prediction-item">
+                    <span>Digit ${pred.digit}</span>
+                    <span>${(pred.confidence * 100).toFixed(2)}%</span>
+                </div>
+            `).join('');
+
+            resultSection.classList.add('show');
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function hideResult() {
+            document.getElementById('resultSection').classList.remove('show');
+        }
+    </script>
+</body>
+</html>

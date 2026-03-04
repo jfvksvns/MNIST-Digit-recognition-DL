@@ -73,6 +73,4 @@
 - **CORS errors** – ensure `flask-cors` is installed and that the backend host matches the `API_URL`.
 - **Bad predictions** – retrain using `notebooks/traine.py` and consider supplying domain-specific data in `data/`.
 
-## License
-- No explicit license is provided. Add one if you intend to share or open-source the project.
 

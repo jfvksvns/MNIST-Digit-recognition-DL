@@ -1,8 +1,4 @@
-<center>
-
 # Digit-DL – Handwritten Digit Recognition
-
-</center>
 
 ## Overview
 - Digit-DL delivers an end-to-end MNIST digit recognition experience with a Flask backend and a static HTML/CSS/JS frontend.
